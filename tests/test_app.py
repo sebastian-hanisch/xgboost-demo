@@ -154,13 +154,15 @@ def test_the_address_bar_mirrors_the_settings():
 
 
 def test_convergence_experiment_runs_on_demand():
+    """gradient-boosting-demo ist nur lokal neben diesem Repo vorhanden (auf CI wird je Repo einzeln ausgecheckt) - dann zeigt die App nur die XGBoost-Kurve mit einem Hinweis
+    statt des vollen Vergleichstexts. Beide Fälle sind ein gültiges, unfallfreies Ergebnis."""
     at = _run()
-    assert not any("Testfehler von 15" in c.value for c in at.caption)
+    assert not any("Mittel über fünf Datensätze" in c.value for c in at.caption)
     at.button(key="conv_start").click()
     at.run()
     assert not at.exception, [e.value for e in at.exception]
     text = " ".join(c.value for c in at.caption)
-    assert "Mittel über fünf Datensätze" in text
+    assert "Mittel über fünf Datensätze" in text or "nicht neben diesem Repo gefunden" in text
 
 
 def test_lambda_experiment_runs_on_demand():
