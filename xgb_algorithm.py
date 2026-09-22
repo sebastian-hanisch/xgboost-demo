@@ -1,6 +1,6 @@
 """XGBoost (Chen & Guestrin 2016): dieselbe additive Boosting-Idee wie gradient-boosting-demo (F_m = F_{m-1} + Lernrate * Baum_m), aber jede Runde optimiert direkt das REGULARISIERTE Ziel
 `Σ l(y_i, F_{m-1}(x_i) + Baum_m(x_i)) + Ω(Baum_m)` mit `Ω(T) = γ*Blätter + 0.5*λ*Σ Blattwerte²` über eine Newton-Näherung zweiter Ordnung (Gradient UND Hessematrix, nicht nur der Gradient wie in
-gradient-boosting-demo). Der Baumkern (`xgb_tree.py`) sucht Schnitte direkt über diese Formel - der Blattwert ist der Newton-Schritt `-G/(H+λ)`, keine nachträgliche Korrektur nötig."""
+gradient-boosting-demo). Der Baumkern (`xgb_tree.py`) sucht Splits direkt über diese Formel - der Blattwert ist der Newton-Schritt `-G/(H+λ)`, keine nachträgliche Korrektur nötig."""
 
 from dataclasses import dataclass
 

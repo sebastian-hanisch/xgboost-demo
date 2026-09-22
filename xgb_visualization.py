@@ -68,7 +68,7 @@ def tree_layout(tree):
 
 
 def build_round_tree(tree, names, height=280):
-    """Der Baum einer Runde: Blattwerte sind Newton-Schritte -G/(H+lambda) (mit der Lernrate skaliert addiert), innere Knoten zeigen den Gewinn ihres Schnitts (nach Abzug von gamma)."""
+    """Der Baum einer Runde: Blattwerte sind Newton-Schritte -G/(H+lambda) (mit der Lernrate skaliert addiert), innere Knoten zeigen den Gain ihres Splits (nach Abzug von gamma)."""
     x, y = tree_layout(tree)
     inner = tree.feature >= 0
     fig = go.Figure()
@@ -87,7 +87,7 @@ def build_round_tree(tree, names, height=280):
     labels = [f"{names[tree.feature[t]]} ≤ {tree.threshold[t]:.3g}" for t in np.nonzero(inner)[0]]
     fig.add_trace(go.Scatter(x=x[inner], y=y[inner], mode="markers+text", text=labels if tree.n_nodes <= 15 else "", textposition="top center", textfont=dict(size=9),
                              marker=dict(size=size[inner], color="#ffffff", line=dict(color="#555555", width=1)),
-                             hovertext=[f"{names[tree.feature[t]]} ≤ {tree.threshold[t]:.4g}? Gewinn {tree.gain[t]:.4f}" for t in np.nonzero(inner)[0]], hoverinfo="text", showlegend=False))
+                             hovertext=[f"{names[tree.feature[t]]} ≤ {tree.threshold[t]:.4g}? Gain {tree.gain[t]:.4f}" for t in np.nonzero(inner)[0]], hoverinfo="text", showlegend=False))
     fig.update_xaxes(visible=False)
     fig.update_yaxes(visible=False)
     return lock_axes(fig, height, plot_bgcolor="rgba(0,0,0,0)")

@@ -25,7 +25,7 @@ N_ROUNDS_MIN, N_ROUNDS_MAX, DEFAULT_N_ROUNDS = 1, 300, 60
 DEPTH_MIN, DEPTH_MAX, DEFAULT_DEPTH = 1, 6, 3
 LR_MIN, LR_MAX, DEFAULT_LR = 0.02, 1.0, 0.3
 LAM_MIN, LAM_MAX, DEFAULT_LAM = 0.0, 20.0, 1.0                        # L2-Regularisierung der Blattgewichte
-GAMMA_MIN, GAMMA_MAX, DEFAULT_GAMMA = 0.0, 20.0, 0.0                  # Mindestgewinn je Schnitt (Vorwärts-Beschneidung)
+GAMMA_MIN, GAMMA_MAX, DEFAULT_GAMMA = 0.0, 20.0, 0.0                  # Mindest-Gain je Split (Vorwärts-Beschneidung)
 MIN_CHILD_WEIGHT_MIN, MIN_CHILD_WEIGHT_MAX, DEFAULT_MIN_CHILD_WEIGHT = 0.0, 50.0, 1.0
 SUBSAMPLE_MIN, SUBSAMPLE_MAX, DEFAULT_SUBSAMPLE = 20, 100, 100        # Prozent der Trainingszeilen je Runde
 
@@ -48,7 +48,7 @@ PRESETS = {
 PRESET_HELP = {
     "🌳 Standard": "Tiefe 3, 60 Runden, Lernrate 0.3, λ = 1, γ = 0: Trainingsfehler 1.9 %, Testfehler 15.6 % (Raten: 46.4 %), 453 Blätter insgesamt über alle Runden.",
     "🪓 Ein Schritt (kein Boosting)": "Ein einzelner Tiefe-1-Baum (Lernrate 1, keine weiteren Runden): Testfehler 24.4 % - kaum besser als Raten, 2 Blätter insgesamt.",
-    "🌲 Ohne Bremse (gamma = 0)": "Tiefe 6, 150 Runden, γ = 0 (kein Mindestgewinn je Schnitt): Trainingsfehler 0 %, Testfehler 16.7 %, aber 1963 Blätter insgesamt - das Ensemble ist riesig und passt sich dem Training vollständig an.",
+    "🌲 Ohne Bremse (gamma = 0)": "Tiefe 6, 150 Runden, γ = 0 (kein Mindest-Gain je Split): Trainingsfehler 0 %, Testfehler 16.7 %, aber 1963 Blätter insgesamt - das Ensemble ist riesig und passt sich dem Training vollständig an.",
     "✂️ Mit Gamma-Beschneidung": "Dieselben Einstellungen, nur γ = 0.5 statt 0: nur noch 492 Blätter (−75 %), Trainingsfehler steigt leicht auf 2.0 %, Testfehler sinkt sogar auf 14.7 % (statt 16.7 % ohne Bremse) - kleinere, aber bessere Bäume.",
     "📈 Regression Standard": "Tiefe 3, 60 Runden, Lernrate 0.3, λ = 1, γ = 0, Ziel Lieferdauer: Test-RMSE 9.0 Minuten, 464 Blätter insgesamt.",
 }

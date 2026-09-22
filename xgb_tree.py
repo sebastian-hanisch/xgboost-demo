@@ -1,11 +1,11 @@
 """Der XGBoost-Baumkern (Chen & Guestrin 2016, "XGBoost: A Scalable Tree Boosting System"): anders als der Regressionsbaum aus cart-demo/gradient-boosting-demo (Varianz-Kriterium, Blattwert = Mittelwert)
-sucht dieser Kern Schnitte über das REGULARISIERTE Ziel direkt - jeder Knoten trägt die Summen G = Summe der Gradienten, H = Summe der Hessematrix-Diagonale (zweite Ableitung) seiner Zeilen, der beste
-Schnitt maximiert den Gewinn `0.5*[GL²/(HL+λ) + GR²/(HR+λ) - G²/(H+λ)] - γ` und der Blattwert ist direkt der Newton-Schritt `-G/(H+λ)` - keine nachträgliche Blattwert-Korrektur wie in gradient-boosting-demo
-nötig, weil der Gewinn schon der (mit λ regularisierte) Newton-Schritt ist. `γ` bestraft jeden Schnitt einzeln: ein Schnitt wird nur gemacht, wenn der Gewinn (nach Abzug von γ) positiv ist - das ist die
+sucht dieser Kern Splits über das REGULARISIERTE Ziel direkt - jeder Knoten trägt die Summen G = Summe der Gradienten, H = Summe der Hessematrix-Diagonale (zweite Ableitung) seiner Zeilen, der beste
+Split maximiert den Gain `0.5*[GL²/(HL+λ) + GR²/(HR+λ) - G²/(H+λ)] - γ` und der Blattwert ist direkt der Newton-Schritt `-G/(H+λ)` - keine nachträgliche Blattwert-Korrektur wie in gradient-boosting-demo
+nötig, weil der Gain schon der (mit λ regularisierte) Newton-Schritt ist. `γ` bestraft jeden Split einzeln: ein Split wird nur gemacht, wenn der Gain (nach Abzug von γ) positiv ist - das ist die
 eingebaute Vorwärts-Beschneidung, die cart-demo erst nachträglich über Kosten-Komplexität nachrüsten musste.
 
-Der Baum liegt in parallelen Feldern wie in cart-demo (Breitenreihenfolge, Schwelle = Mitte zwischen zwei benachbarten Werten). Die Schnittsuche ist vektorisiert (sortieren, kumulative Summen von G und H
-je Merkmal in einem Zug), aber neu geschrieben (die Gewinnformel unterscheidet sich fundamental von Varianz/Gini/Entropie)."""
+Der Baum liegt in parallelen Feldern wie in cart-demo (Breitenreihenfolge, Schwelle = Mitte zwischen zwei benachbarten Werten). Die Split-Suche ist vektorisiert (sortieren, kumulative Summen von G und H
+je Merkmal in einem Zug), aber neu geschrieben (die Gain-Formel unterscheidet sich fundamental von Varianz/Gini/Entropie)."""
 
 from dataclasses import dataclass
 
@@ -21,7 +21,7 @@ class Tree:
     left: np.ndarray             # -1 bei Blättern
     right: np.ndarray
     value: np.ndarray            # Newton-Schritt -G/(H+lambda), für jeden Knoten (auch innere - "wäre dieser ein Blatt")
-    gain: np.ndarray             # Gewinn des Schnitts an diesem Knoten (0 bei Blättern)
+    gain: np.ndarray             # Gain des Splits an diesem Knoten (0 bei Blättern)
     g_sum: np.ndarray
     h_sum: np.ndarray
     n: np.ndarray
@@ -47,10 +47,10 @@ class Tree:
         return np.nonzero(self.feature >= 0)[0]
 
 
-# --- Schnittsuche ------------------------------------------------------------------------------------------------------------------------------------
+# --- Split-Suche ------------------------------------------------------------------------------------------------------------------------------------
 
 def gain_matrix(X, grad, hess, lam, gamma, min_child_weight):
-    """Gewinn für jede Schwelle jedes Merkmals. Rückgabe: (gain, thr): Matrizen (m-1, d); gain = -inf, wo die Schwelle unzulässig ist (gleiche Werte, zu kleines Hesse-Gewicht in einem Kind)."""
+    """Gain für jede Schwelle jedes Merkmals. Rückgabe: (gain, thr): Matrizen (m-1, d); gain = -inf, wo die Schwelle unzulässig ist (gleiche Werte, zu kleines Hesse-Gewicht in einem Kind)."""
     m, d = X.shape
     order = np.argsort(X, axis=0, kind="stable")
     xs = np.take_along_axis(X, order, axis=0)
@@ -68,7 +68,7 @@ def gain_matrix(X, grad, hess, lam, gamma, min_child_weight):
 
 
 def best_split(X, grad, hess, lam, gamma, min_child_weight):
-    """(Merkmal, Schwelle, Gewinn) des besten Schnitts oder None (kein zulässiger Schnitt oder bester Gewinn <= 0 - Vorwärts-Beschneidung durch gamma). Bei Gleichstand gewinnt das kleinste Merkmal, dann die kleinste Schwelle."""
+    """(Merkmal, Schwelle, Gain) des besten Splits oder None (kein zulässiger Split oder bester Gain <= 0 - Vorwärts-Beschneidung durch gamma). Bei Gleichstand gewinnt das kleinste Merkmal, dann die kleinste Schwelle."""
     m = len(grad)
     if m < 2:
         return None
@@ -84,7 +84,7 @@ def best_split(X, grad, hess, lam, gamma, min_child_weight):
 # --- Wachsen -------------------------------------------------------------------------------------------------------------------------------------------
 
 def grow(X, grad, hess, max_depth=None, lam=1.0, gamma=0.0, min_child_weight=1.0):
-    """Wächst den Baum Ebene für Ebene. Ein Knoten wird nicht geteilt, wenn die Tiefe erreicht ist oder kein Schnitt mit positivem Gewinn existiert (gamma-Beschneidung, vorwärts statt nachträglich wie in cart-demo)."""
+    """Wächst den Baum Ebene für Ebene. Ein Knoten wird nicht geteilt, wenn die Tiefe erreicht ist oder kein Split mit positivem Gain existiert (gamma-Beschneidung, vorwärts statt nachträglich wie in cart-demo)."""
     X = np.asarray(X, dtype=float)
     grad = np.asarray(grad, dtype=float)
     hess = np.asarray(hess, dtype=float)
@@ -139,7 +139,7 @@ def predict_value(tree, X):
 
 
 def importances(tree):
-    """Wichtigkeit je Merkmal: Summe der Gewinne aller Schnitte dieses Merkmals, auf Summe 1 normiert (0, wenn der Baum nur die Wurzel hat)."""
+    """Wichtigkeit je Merkmal: Summe der Gains aller Splits dieses Merkmals, auf Summe 1 normiert (0, wenn der Baum nur die Wurzel hat)."""
     imp = np.zeros(tree.n_features)
     for t in tree.internal_nodes():
         imp[tree.feature[t]] += tree.gain[t]

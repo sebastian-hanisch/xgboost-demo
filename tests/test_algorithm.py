@@ -1,4 +1,4 @@
-"""XGBoost gegen unabhängige Referenzen: die Gewinnformel gegen Brute-Force über alle Schwellen, die Vorhersagen für wenige Runden fast exakt (Rundungsrauschen ~1e-7) gegen die echte `xgboost`-Bibliothek
+"""XGBoost gegen unabhängige Referenzen: die Gain-Formel gegen Brute-Force über alle Schwellen, die Vorhersagen für wenige Runden fast exakt (Rundungsrauschen ~1e-7) gegen die echte `xgboost`-Bibliothek
 (`tree_method="exact"`, gleiche Parameter), mit lambda=0/gamma=0 identisch mit gradient-boosting-demo bis unabhängige Fließkomma-Gleichstände bei sehr kleinen Residuen nach vielen Runden auseinanderlaufen
 (siehe README) - deshalb wird der exakte Vergleich auf wenige Runden begrenzt, danach nur noch Korrelation/Toleranz geprüft."""
 
@@ -30,7 +30,7 @@ def _cls(n=300, d=5, seed=0, noise=0.5):
     return X, y
 
 
-# --- Gewinnformel gegen Brute-Force -----------------------------------------------------------------------------------------------------------------
+# --- Gain-Formel gegen Brute-Force -----------------------------------------------------------------------------------------------------------------
 
 def test_gain_matrix_matches_brute_force_search():
     rng = np.random.default_rng(1)
@@ -62,7 +62,7 @@ def test_gain_matrix_matches_brute_force_search():
 def test_split_is_rejected_when_no_gain_is_positive():
     rng = np.random.default_rng(2)
     X = rng.normal(size=(30, 2))
-    grad = rng.normal(0, 0.01, 30)                                        # winzige Gradienten: kein Schnitt lohnt sich gegen ein hohes gamma
+    grad = rng.normal(0, 0.01, 30)                                        # winzige Gradienten: kein Split lohnt sich gegen ein hohes gamma
     hess = np.ones(30)
     assert T.best_split(X, grad, hess, lam=1.0, gamma=50.0, min_child_weight=1.0) is None
 
@@ -107,7 +107,7 @@ def test_zero_regularization_matches_gradient_boosting_demo_for_moderate_rounds(
 
 
 def test_zero_regularization_eventually_diverges_from_gb_only_via_float_tie_breaks():
-    """Nach vielen Runden können winzige, sich unabhängig aufbauende Fließkomma-Unterschiede zwischen den zwei verschieden geschriebenen (aber mathematisch identischen) Gewinnformeln einen Gleichstand
+    """Nach vielen Runden können winzige, sich unabhängig aufbauende Fließkomma-Unterschiede zwischen den zwei verschieden geschriebenen (aber mathematisch identischen) Gain-Formeln einen Gleichstand
     unterschiedlich auflösen - dokumentiert hier als bewusst NICHT als exakter Test, nur als Plausibilitätsprüfung (die Vorhersagen bleiben nahe beieinander, nicht mehr exakt gleich)."""
     if not GB_DIR.exists():
         pytest.skip("gradient-boosting-demo nicht neben diesem Repo gefunden")

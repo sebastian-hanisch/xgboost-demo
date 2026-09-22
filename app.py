@@ -3,7 +3,7 @@ Sebastian Hanisch - Operations Research und Machine Learning
 
 Anders als die Fall-Demos im Portfolio (ein Anwendungsfall, mehrere Verfahren im Vergleich) zeigt diese Demo EIN Verfahren - XGBoost - und lässt stattdessen das Beispiel wachsen.
 Siebtes Stück der Baumbasierten Linie der "Konzepte"-Reihe, drittes Stück des Boosting-Asts (nach AdaBoost, Gradient Boosting): Gradient Boosting nutzt nur den Gradienten (erste Ableitung) und
-korrigiert Blattwerte nachträglich - XGBoost nutzt zusätzlich die Hesse-Matrix (zweite Ableitung) direkt in der Schnittsuche und regularisiert das Ziel selbst (lambda, gamma) statt nur zu schrumpfen.
+korrigiert Blattwerte nachträglich - XGBoost nutzt zusätzlich die Hesse-Matrix (zweite Ableitung) direkt in der Split-Suche und regularisiert das Ziel selbst (lambda, gamma) statt nur zu schrumpfen.
 Siehe README für die Einordnung.
 
 Lauffähig mit: streamlit run app.py
@@ -48,7 +48,7 @@ if GB_DIR.exists():
 
 VERDICT_TEXT = {
     "stump": "ℹ️ **Nur ein Schritt eingestellt** - das ist die Vorhersage eines einzelnen (mit Lernrate skalierten) Baums, noch kein Boosting.",
-    "overfit": "⚠️ **Überanpassung:** der Testfehler liegt deutlich über dem Trainingsfehler - mehr γ (Mindestgewinn je Schnitt) probieren.",
+    "overfit": "⚠️ **Überanpassung:** der Testfehler liegt deutlich über dem Trainingsfehler - mehr γ (Mindest-Gain je Split) probieren.",
     "underfit": "⚠️ **Unteranpassung:** kaum besser als Raten - mehr Runden, größere Lernrate oder tiefere Bäume könnten helfen.",
     "ok": "✅ **Sieht vernünftig aus:** Training und Test liegen nicht weit auseinander.",
 }
@@ -88,15 +88,15 @@ st.title("🚀🌳 XGBoost – regularisiertes Ziel und Newton-Schritt")
 st.markdown(
     """
 **Gradient Boosting** (voriges Stück) wächst jede Runde einen gewöhnlichen Regressionsbaum auf den Pseudo-Residuen (nur der Gradient, die erste Ableitung) und trägt danach den verlustoptimalen
-Blattwert nach. **XGBoost** (Chen & Guestrin 2016) geht einen Schritt weiter: die Schnittsuche selbst optimiert direkt das **regularisierte** Ziel `Σ l(y, F+Baum) + γ·Blätter + 0.5·λ·Σ Blattgewichte²`
-über eine Newton-Näherung **zweiter** Ordnung (Gradient **und** Hesse-Matrix). Der Blattwert ist der Newton-Schritt `-G/(H+λ)`, der Gewinn eines Schnitts `0.5·[GL²/(HL+λ) + GR²/(HR+λ) - G²/(H+λ)] - γ` -
-ein Schnitt lohnt sich nur, wenn dieser Gewinn positiv ist (**Vorwärts-Beschneidung** durch γ, statt wie in cart-demo nachträglich über Kosten-Komplexität).
+Blattwert nach. **XGBoost** (Chen & Guestrin 2016) geht einen Schritt weiter: die Split-Suche selbst optimiert direkt das **regularisierte** Ziel `Σ l(y, F+Baum) + γ·Blätter + 0.5·λ·Σ Blattgewichte²`
+über eine Newton-Näherung **zweiter** Ordnung (Gradient **und** Hesse-Matrix). Der Blattwert ist der Newton-Schritt `-G/(H+λ)`, der Gain eines Splits `0.5·[GL²/(HL+λ) + GR²/(HR+λ) - G²/(H+λ)] - γ` -
+ein Split lohnt sich nur, wenn dieser Gain positiv ist (**Vorwärts-Beschneidung** durch γ, statt wie in cart-demo nachträglich über Kosten-Komplexität).
 """
 )
 st.caption(
     "Anders als die Fall-Demos im Portfolio, die an einem Anwendungsfall mehrere Verfahren vergleichen, zeigt diese Demo - siebtes Stück der Baumbasierten Linie der \"Konzepte\"-Reihe und drittes Stück des "
     "**Boosting-Asts** (nach AdaBoost, Gradient Boosting) - **ein** Verfahren an einem wachsenden Beispiel. Das Verfahren geht auf Chen und Guestrin (2016) zurück; alle Lieferungen, Merkmale und Zahlen "
-    "dieser Demo sind erzeugt und gemessen - keine echten Daten. Der Baumkern (`xgb_tree.py`) ist neu geschrieben (die Gewinnformel unterscheidet sich fundamental vom Varianz-Kriterium aus cart-demo/"
+    "dieser Demo sind erzeugt und gemessen - keine echten Daten. Der Baumkern (`xgb_tree.py`) ist neu geschrieben (die Gain-Formel unterscheidet sich fundamental vom Varianz-Kriterium aus cart-demo/"
     "gradient-boosting-demo); die echte `xgboost`-Bibliothek kommt nur in den Tests als Gegenprobe vor."
 )
 st.caption(
@@ -109,7 +109,7 @@ with st.expander("So funktioniert XGBoost", expanded=True):
         r"""
 1. **Start:** die beste konstante Vorhersage $F_0$ (Mittelwert für Regression, Log-Odds der Basisrate für Klassifikation) - nicht durch λ regularisiert, wie im echten XGBoost.
 2. **Jede Runde $m$:** Gradient $g_i$ **und** Hesse-Diagonale $h_i$ der Verlustfunktion an $F_{m-1}(x_i)$ ausrechnen (quadratischer Verlust bei Regression, Log-Loss bei Klassifikation).
-3. **Schnittsuche:** für jeden Knoten $G=\sum g_i$, $H=\sum h_i$; ein Schnitt in zwei Kinder mit Summen $G_L,H_L,G_R,H_R$ lohnt sich, wenn $\tfrac12\big[\tfrac{G_L^2}{H_L+\lambda}+\tfrac{G_R^2}{H_R+\lambda}-\tfrac{G^2}{H+\lambda}\big]-\gamma>0$ ist - sonst bleibt der Knoten ein Blatt.
+3. **Split-Suche:** für jeden Knoten $G=\sum g_i$, $H=\sum h_i$; ein Split in zwei Kinder mit Summen $G_L,H_L,G_R,H_R$ lohnt sich, wenn $\tfrac12\big[\tfrac{G_L^2}{H_L+\lambda}+\tfrac{G_R^2}{H_R+\lambda}-\tfrac{G^2}{H+\lambda}\big]-\gamma>0$ ist - sonst bleibt der Knoten ein Blatt.
 4. **Blattwert:** direkt der Newton-Schritt $w^*=-\tfrac{G}{H+\lambda}$ - keine nachträgliche Korrektur wie in gradient-boosting-demo nötig.
 5. **Update:** $F_m(x)=F_{m-1}(x)+\eta\cdot\text{Baum}_m(x)$, optional auf einer Teilstichprobe der Zeilen.
         """
@@ -135,8 +135,8 @@ with st.sidebar:
     lr = st.slider("Lernrate", *bounds("lr_slider"), key="lr_slider", step=0.01, format="%.2f")
     lam = st.slider("λ (L2 auf Blattgewichte)", *bounds("lam_slider"), key="lam_slider", step=0.1, format="%.1f",
                     help="Dämpft die Blattgewichte -G/(H+λ) - größer heißt vorsichtigere Schritte, ändert aber kaum, WIE GROSS die Bäume werden (siehe Experiment).")
-    gamma = st.slider("γ (Mindestgewinn je Schnitt)", *bounds("gamma_slider"), key="gamma_slider", step=0.1, format="%.1f",
-                      help="Ein Schnitt wird nur gemacht, wenn sein Gewinn (nach Abzug von γ) positiv ist - steuert direkt, wie groß die Bäume werden (siehe Experiment).")
+    gamma = st.slider("γ (Mindest-Gain je Split)", *bounds("gamma_slider"), key="gamma_slider", step=0.1, format="%.1f",
+                      help="Ein Split wird nur gemacht, wenn sein Gain (nach Abzug von γ) positiv ist - steuert direkt, wie groß die Bäume werden (siehe Experiment).")
     mcw = st.slider("Mindest-Hessegewicht je Blatt", *bounds("mcw_slider"), key="mcw_slider", step=0.5, format="%.1f",
                     help="Wie min_samples_leaf, aber gewichtet mit der Hesse-Matrix statt gezählten Zeilen (bei Regression = Zeilenzahl, bei Klassifikation kleiner für unsichere Zeilen).")
     subsample = st.slider("Teilstichprobe je Runde [%]", *bounds("subsample_slider"), key="subsample_slider", format="%.0f%%")
@@ -184,7 +184,7 @@ if st.session_state.get("xgb_owner") != view_key:
 # --- XGBoost in Aktion -------------------------------------------------------------------------------------------------------------------------------
 
 st.markdown("## 🚀 XGBoost in Aktion")
-st.caption("Runde für Runde: links der Baum dieser Runde (Blattwerte = Newton-Schritte, Knoten zeigen den Gewinn ihres Schnitts), rechts die Vorhersage des Ensembles bis dahin.")
+st.caption("Runde für Runde: links der Baum dieser Runde (Blattwerte = Newton-Schritte, Knoten zeigen den Gain ihres Splits), rechts die Vorhersage des Ensembles bis dahin.")
 if n_trees > 1:
     step_col, play_col = st.columns([5, 2])
     with step_col:
@@ -244,7 +244,7 @@ st.caption(f"Der Trainingsfehler sinkt fast durchgehend; der Testfehler erreicht
 
 st.markdown("**Wichtigkeit je Merkmal**")
 st.plotly_chart(build_importance(names, a.imp), width="stretch", key="importance_chart")
-st.caption("Gemittelt über alle Bäume des Ensembles: Summe der Schnittgewinne je Merkmal, auf 1 normiert.")
+st.caption("Gemittelt über alle Bäume des Ensembles: Summe der Split-Gains je Merkmal, auf 1 normiert.")
 
 st.markdown("---")
 
@@ -306,9 +306,9 @@ st.markdown(
     """
 | Annahme | Was passiert, wenn sie verletzt ist | Wer setzt an |
 |---|---|---|
-| **λ allein reicht als Regularisierung** | λ dämpft nur die Blattgewichte, nicht die Baumgröße - in diesem Datensatz wächst die Blätterzahl sogar leicht mit λ (gemessen oben). | γ (Mindestgewinn je Schnitt) zusätzlich einsetzen |
+| **λ allein reicht als Regularisierung** | λ dämpft nur die Blattgewichte, nicht die Baumgröße - in diesem Datensatz wächst die Blätterzahl sogar leicht mit λ (gemessen oben). | γ (Mindest-Gain je Split) zusätzlich einsetzen |
 | **γ zu hoch gewählt** | Zu viel Vorwärts-Beschneidung unterpasst wieder - der Testfehler steigt nach einem Minimum erneut (gemessen oben). | γ anhand eines zurückgehaltenen Testfehlers wählen, nicht fest vorgeben |
-| **Exakte Schnittsuche bei großen Datensätzen** | Diese Demo sucht jede Schwelle jedes Merkmals exakt - bei sehr großen n wird das teuer; das echte XGBoost bietet dafür Histogramm-Varianten (`tree_method="hist"`), hier nicht gebaut. | LightGBM (nächstes Stück): blattweises Wachsen mit Histogramm-Schnitten von Grund auf |
+| **Exakte Split-Suche bei großen Datensätzen** | Diese Demo sucht jede Schwelle jedes Merkmals exakt - bei sehr großen n wird das teuer; das echte XGBoost bietet dafür Histogramm-Varianten (`tree_method="hist"`), hier nicht gebaut. | LightGBM (nächstes Stück): blattweises Wachsen mit Histogramm-Splits von Grund auf |
 | **Hesse-Gewicht als Blattgröße** | Bei Klassifikation ist h = p(1-p) ≤ 0.25 - unsichere Zeilen (p nahe 0.5) zählen für `min_child_weight` weniger als sichere; ein Blatt kann dadurch mehr Zeilen enthalten, als die Zahl allein vermuten lässt. | Zeilenzahl direkt prüfen, wenn das überrascht |
 """
 )
@@ -325,15 +325,15 @@ mit $g_i=\partial l/\partial F$, $h_i=\partial^2 l/\partial F^2$, $T$ = Blattzah
 **Für ein festes Baumgerüst** ist das optimale Blattgewicht $w_j^*=-\dfrac{G_j}{H_j+\lambda}$ mit $G_j=\sum_{i\in R_j} g_i$, $H_j=\sum_{i\in R_j} h_i$; eingesetzt ergibt sich der optimale Zielwert
 $-\tfrac12\sum_j \dfrac{G_j^2}{H_j+\lambda}+\gamma T$ - je kleiner, desto besser.
 
-**Gewinn eines Schnitts** (Blatt in zwei Kinder L, R geteilt): $\text{Gain}=\tfrac12\Big[\dfrac{G_L^2}{H_L+\lambda}+\dfrac{G_R^2}{H_R+\lambda}-\dfrac{G^2}{H+\lambda}\Big]-\gamma$ - die Differenz der
-Zielwerte vor und nach dem Schnitt; nur bei Gain > 0 lohnt sich der Schnitt.
+**Gain eines Splits** (Blatt in zwei Kinder L, R geteilt): $\text{Gain}=\tfrac12\Big[\dfrac{G_L^2}{H_L+\lambda}+\dfrac{G_R^2}{H_R+\lambda}-\dfrac{G^2}{H+\lambda}\Big]-\gamma$ - die Differenz der
+Zielwerte vor und nach dem Split; nur bei Gain > 0 lohnt sich der Split.
 
 **Verlustfunktionen dieser Demo:** quadratisch (Regression): $g_i=F_i-y_i$, $h_i=1$; Log-Loss (Klassifikation): $g_i=\sigma(F_i)-y_i$, $h_i=\sigma(F_i)(1-\sigma(F_i))$.
 
-**Mit λ = 0, γ = 0** reduziert sich die Gewinnformel exakt auf die (halbierte) Varianzabnahme, die cart-demo/gradient-boosting-demo für quadratischen Verlust berechnet, und der Blattwert auf den
+**Mit λ = 0, γ = 0** reduziert sich die Gain-Formel exakt auf die (halbierte) Varianzabnahme, die cart-demo/gradient-boosting-demo für quadratischen Verlust berechnet, und der Blattwert auf den
 gewöhnlichen Mittelwert der Residuen - beide Bäume wachsen dann strukturell identisch (geprüft in `tests/test_algorithm.py`, bis unabhängige Fließkomma-Gleichstände nach vielen Runden auseinanderlaufen).
 
-Implementiert in `xgb_tree.py` (Baumkern mit regularisierter Schnittsuche), `xgb_algorithm.py` (Fit, Vorhersage), `xgb_evaluation.py` (Analyse, Rundenkurve, Konvergenz-, λ- und γ-Experimente).
+Implementiert in `xgb_tree.py` (Baumkern mit regularisierter Split-Suche), `xgb_algorithm.py` (Fit, Vorhersage), `xgb_evaluation.py` (Analyse, Rundenkurve, Konvergenz-, λ- und γ-Experimente).
         """
     )
 
