@@ -25,6 +25,7 @@ from xgb_presets import (
     init_session_state_defaults,
     load_permalink_settings,
     randomize_seed,
+    seed_widget,
     sync_query_params,
 )
 from xgb_visualization import (
@@ -144,6 +145,7 @@ with st.sidebar:
     n = st.slider("Lieferungen", *bounds("n_slider"), key="n_slider", step=100)
     n_noise = st.slider("Rauschmerkmale", *bounds("n_noise_slider"), key="n_noise_slider")
     if task == "class":
+        seed_widget("label_noise_slider")
         label_noise = st.slider("Falsche Etiketten im Training [%]", *bounds("label_noise_slider"), key="label_noise_slider")
         st.session_state["_label_noise_kept"] = label_noise
     else:
