@@ -260,10 +260,26 @@ if st.session_state.get("conv_on"):
         crows = _convergence(2, 1.0, 0.3, 0.1, int(n), int(n_noise), int(label_noise))
     st.plotly_chart(build_convergence_chart(crows), width="stretch", key="convergence_chart")
     if _gb is not None:
-        x15 = next((r["xgb"] for r in crows if r["n_rounds"] == 15), None)
-        g30 = next((r["gb"] for r in crows if r["n_rounds"] == 30), None)
-        st.caption(f"Jeweils mit der eigenen typischen Lernrate (XGBoost 0.3, Gradient Boosting 0.1), Tiefe 2, Mittel über fünf Datensätze: XGBoost unterschreitet einen Testfehler von 15 % schon "
-                   f"bei Runde 15 ({x15:.1%}), Gradient Boosting erst bei Runde 30 ({g30:.1%}) - dank Regularisierung (λ) verträgt XGBoost hier eine größere Lernrate, ohne stärker zu überanpassen.")
+        x_r = ev.rounds_to_threshold(crows, "xgb", 0.15)
+        g_r = ev.rounds_to_threshold(crows, "gb", 0.15)
+        x_err = next((r["xgb"] for r in crows if r["n_rounds"] == x_r), None)
+        g_err = next((r["gb"] for r in crows if r["n_rounds"] == g_r), None)
+        last = crows[-1]["n_rounds"]
+        if x_r is not None and g_r is not None and x_r < g_r:
+            verdict_text = (f"XGBoost unterschreitet einen Testfehler von 15 % schon bei Runde {x_r} ({x_err:.1%}), Gradient Boosting erst bei Runde {g_r} ({g_err:.1%}) - "
+                            f"dank Regularisierung (λ) verträgt XGBoost hier eine größere Lernrate, ohne stärker zu überanpassen.")
+        elif x_r is not None and g_r is not None and x_r > g_r:
+            verdict_text = f"Gradient Boosting unterschreitet einen Testfehler von 15 % schon bei Runde {g_r} ({g_err:.1%}), XGBoost erst bei Runde {x_r} ({x_err:.1%}) - bei diesen Reglerwerten bringt die größere Lernrate keinen Vorsprung."
+        elif x_r is not None and g_r is not None:
+            verdict_text = f"Beide unterschreiten einen Testfehler von 15 % bei Runde {x_r} (XGBoost {x_err:.1%}, Gradient Boosting {g_err:.1%})."
+        elif x_r is not None:
+            verdict_text = f"XGBoost unterschreitet einen Testfehler von 15 % bei Runde {x_r} ({x_err:.1%}), Gradient Boosting erreicht ihn bis Runde {last} nicht."
+        elif g_r is not None:
+            verdict_text = f"Gradient Boosting unterschreitet einen Testfehler von 15 % bei Runde {g_r} ({g_err:.1%}), XGBoost erreicht ihn bis Runde {last} nicht."
+        else:
+            verdict_text = f"Keines der beiden Verfahren unterschreitet bei diesen Reglerwerten bis Runde {last} einen Testfehler von 15 %."
+        st.caption(f"Jeweils mit der eigenen typischen Lernrate (XGBoost 0.3, Gradient Boosting 0.1), Tiefe 2, Mittel über fünf Datensätze, gemessen auf einem Rundenraster; die Rundenzahlen hängen von den aktuellen Reglern ab "
+                   f"(Datensatzgröße, Rauschmerkmale, falsche Etiketten; die Voreinstellung gibt 15 gegen 30): {verdict_text}")
     else:
         st.caption("gradient-boosting-demo wurde nicht neben diesem Repo gefunden - nur die XGBoost-Kurve wird gezeigt.")
 
