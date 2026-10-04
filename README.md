@@ -97,4 +97,4 @@ venv\Scripts\python -m pytest tests -q
 
 ---
 
-Teil des Portfolios von [Sebastian Hanisch](https://sebastianhanisch.net) – Operations Research und Machine Learning.
+Diese Demo ist Teil des Portfolios von [Sebastian Hanisch](https://sebastianhanisch.net) – Operations Research und Machine Learning ([Über mich](https://sebastianhanisch.net/ueber-mich.html)). Mehr zur Reihe: [Baumbasierte Verfahren: von CART bis CatBoost](https://sebastianhanisch.net/konzepte-baumbasiert.html).

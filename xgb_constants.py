@@ -47,7 +47,7 @@ PRESETS = {
 }
 PRESET_HELP = {
     "🌳 Standard": "Tiefe 3, 60 Runden, Lernrate 0.3, λ = 1, γ = 0: Trainingsfehler 1.9 %, Testfehler 15.6 % (Raten: 46.4 %), 453 Blätter insgesamt über alle Runden.",
-    "🪓 Ein Schritt (kein Boosting)": "Ein einzelner Tiefe-1-Baum (Lernrate 1, keine weiteren Runden): Testfehler 24.4 % - kaum besser als Raten, 2 Blätter insgesamt.",
+    "🪓 Ein Schritt (kein Boosting)": "Ein einzelner Tiefe-1-Baum (Lernrate 1, keine weiteren Runden): Testfehler 24.4 % - besser als Raten (46.4 %), aber weit hinter dem Standard-Ensemble, 2 Blätter insgesamt.",
     "🌲 Ohne Bremse (gamma = 0)": "Tiefe 6, 150 Runden, γ = 0 (kein Mindest-Gain je Split): Trainingsfehler 0 %, Testfehler 16.7 %, aber 1963 Blätter insgesamt - das Ensemble ist riesig und passt sich dem Training vollständig an.",
     "✂️ Mit Gamma-Beschneidung": "Dieselben Einstellungen, nur γ = 0.5 statt 0: nur noch 492 Blätter (−75 %), Trainingsfehler steigt leicht auf 2.0 %, Testfehler sinkt sogar auf 14.7 % (statt 16.7 % ohne Bremse) - kleinere, aber bessere Bäume.",
     "📈 Regression Standard": "Tiefe 3, 60 Runden, Lernrate 0.3, λ = 1, γ = 0, Ziel Lieferdauer: Test-RMSE 9.0 Minuten, 464 Blätter insgesamt.",
